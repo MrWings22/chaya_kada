@@ -31,3 +31,6 @@ setuptools>=70.0.0
 wheel>=0.43.0
 Pillow==10.4.0
 psycopg2-binary==2.9.9
+django>=4.2
+psycopg[binary]
+Pillow>=10.0.0
