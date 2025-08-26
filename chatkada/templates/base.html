@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chaya Kada{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% load static %}{% static 'chatkada/css/style.css' %}">
+    <!-- Favicon for most browsers -->
+<link rel="icon" type="image/png" href="{% static 'chatkada/img/chaya_kada_cup.png' %}">
+
+<!-- For old IE and some other browsers (.ico format) -->
+<link rel="shortcut icon" href="{% static 'chatkada/img/favicon.ico' %}">
+
+</head>
+<body>
+    <div id="loader-screen" style="display: flex; align-items: center; justify-content: center; position: fixed; inset: 0; background: #231d14; z-index: 9999;">
+    <img src="{% static 'chatkada/img/chaya_kada_logo.png' %}" alt="Chaya Kada Logo" style="width:80px; height:80px;">
+</div>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+<div class="nav-logo">
+    <img src="{% static 'chatkada/img/chaya_kada_cup.png' %}" alt="Chaya Kada Logo" style="height:2em; width:auto; vertical-align:middle; margin-right:0.5em;">
+    Chaya Kada
+</div>
+
+            {% if user.is_authenticated %}
+            <div class="nav-links">
+                <a href="{% url 'kada' %}" class="nav-link">
+                    <i class="fas fa-store"></i> Kada
+                </a>
+                <a href="{% url 'find_chat' %}" class="nav-link">
+                    <i class="fas fa-comments"></i> Chat
+                </a>
+                <a href="{% url 'profile' %}" class="nav-link">
+                    <i class="fas fa-user"></i> Profile
+                </a>
+                <div class="coins-display">
+                    <i class="fas fa-coins"></i> {{ user.userprofile.coins }}
+                </div>
+                <button id="audio-control-btn" class="nav-link audio-control-btn">
+                    <i class="fas fa-volume-up"></i> Audio
+                </button>
+                <a href="{% url 'logout' %}" class="nav-link logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+            {% else %}
+            <div class="nav-links">
+                <a href="{% url 'login' %}" class="nav-link">Login</a>
+                <a href="{% url 'register' %}" class="nav-link">Register</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Simplified Audio Control Panel -->
+    <div id="audio-control-panel" class="audio-control-panel">
+        <div class="audio-panel-header">
+            <h3><i class="fas fa-music"></i> Kada Audio Controls</h3>
+            <button id="close-audio-panel" class="close-btn">&times;</button>
+        </div>
+        
+        <div class="audio-panel-content">
+            <!-- Master Controls -->
+            <div class="audio-section">
+                <div class="section-header">
+                    <h4><i class="fas fa-sliders-h"></i> Master Controls</h4>
+                </div>
+                <div class="control-group">
+                    <button id="realistic-mode-btn" class="btn btn-primary realistic-btn">
+                        <i class="fas fa-magic"></i> Enable Realistic Mode
+                    </button>
+                    <button id="mute-all-btn" class="btn btn-secondary">
+                        <i class="fas fa-volume-mute"></i> Mute All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Rain Controls -->
+            <div class="audio-section">
+                <div class="section-header">
+                    <h4><i class="fas fa-cloud-rain"></i> Rain Effects</h4>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="rain-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="volume-control">
+                    <label>Volume</label>
+                    <input type="range" id="rain-volume" min="0" max="100" value="30">
+                    <span id="rain-volume-display">30%</span>
+                </div>
+            </div>
+
+            <!-- Thunder & Lightning Controls -->
+            <div class="audio-section">
+                <div class="section-header">
+                    <h4><i class="fas fa-bolt"></i> Thunder & Lightning</h4>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="thunder-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="volume-control">
+                    <label>Thunder Volume</label>
+                    <input type="range" id="thunder-volume" min="0" max="100" value="25">
+                    <span id="thunder-volume-display">25%</span>
+                </div>
+                <div class="thunder-frequency">
+                    <label>Frequency</label>
+                    <select id="thunder-frequency">
+                        <option value="rare">Rare (5-10 min)</option>
+                        <option value="occasional" selected>Occasional (2-5 min)</option>
+                        <option value="frequent">Frequent (30s-2 min)</option>
+                        <option value="storm">Storm Mode (10-30s)</option>
+                    </select>
+                </div>
+                <div class="thunder-preview">
+                    <button id="thunder-test-btn" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-play"></i> Test Thunder
+                    </button>
+                </div>
+            </div>
+
+            <!-- Crowd Ambience -->
+            <div class="audio-section">
+                <div class="section-header">
+                    <h4><i class="fas fa-users"></i> Crowd Ambience</h4>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="crowd-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="volume-control">
+                    <label>Volume</label>
+                    <input type="range" id="crowd-volume" min="0" max="100" value="15">
+                    <span id="crowd-volume-display">15%</span>
+                </div>
+            </div>
+
+            <!-- Nostalgic Music (Simplified) -->
+            <div class="audio-section">
+                <div class="section-header">
+                    <h4><i class="fas fa-radio"></i> Nostalgic Radio</h4>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="music-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="volume-control">
+                    <label>Volume</label>
+                    <input type="range" id="music-volume" min="0" max="100" value="25">
+                    <span id="music-volume-display">25%</span>
+                </div>
+                <div class="music-controls">
+                    <div class="now-playing">
+                        <span id="current-song">No song playing</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Elements -->
+    <audio id="rain-audio" loop>
+        <source src="{% static 'chatkada/sounds/Rain.mp3' %}" type="audio/mpeg">
+    </audio>
+    <audio id="thunder-audio">
+        <source src="{% static 'chatkada/sounds/thunder-1.m4a' %}" type="audio/mpeg">
+    </audio>
+    <audio id="crowd-audio" loop>
+        <source src="{% static 'chatkada/sounds/Cafe.mp3' %}" type="audio/mpeg">
+    </audio>
+    <audio id="music-audio">
+        <source src="{% static 'chatkada/sounds/Alliyambal.mp3' %}" type="audio/mpeg">
+    </audio>
+
+    <!-- Rain Effect Container -->
+    <div class="rain-container" id="rain-container"></div>
+
+    <!-- Lightning & Thunder Effects -->
+    <div id="lightning-container" class="lightning-container">
+        <div id="lightning-flash" class="lightning-flash"></div>
+        <div id="lightning-bolt" class="lightning-bolt"></div>
+        <div id="lightning-branches" class="lightning-branches"></div>
+    </div>
+
+    <!-- Screen Flash Effect -->
+    <div id="screen-flash" class="screen-flash"></div>
+
+    <script>
+        window.addEventListener('load', function() {
+    var loader = document.getElementById('loader-screen');
+    if(loader) loader.style.display = 'none';
+});
+
+// Mobile menu functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Add mobile menu button to navigation
+    const navContainer = document.querySelector('.nav-container');
+    const navLinks = document.querySelector('.nav-links');
+    
+    // Create mobile menu button
+    const mobileMenuBtn = document.createElement('button');
+    mobileMenuBtn.className = 'mobile-menu-btn';
+    mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+    mobileMenuBtn.setAttribute('aria-label', 'Toggle mobile menu');
+    
+    // Insert mobile menu button before nav-links
+    navContainer.insertBefore(mobileMenuBtn, navLinks);
+    
+    // Create overlay for mobile menu
+    const overlay = document.createElement('div');
+    overlay.className = 'nav-overlay';
+    document.body.appendChild(overlay);
+    
+    // Toggle mobile menu
+    mobileMenuBtn.addEventListener('click', function() {
+        navLinks.classList.toggle('active');
+        overlay.classList.toggle('active');
+        
+        // Toggle hamburger/close icon
+        const icon = mobileMenuBtn.querySelector('i');
+        if (navLinks.classList.contains('active')) {
+            icon.className = 'fas fa-times';
+        } else {
+            icon.className = 'fas fa-bars';
+        }
+    });
+    
+    // Close menu when clicking overlay
+    overlay.addEventListener('click', function() {
+        navLinks.classList.remove('active');
+        overlay.classList.remove('active');
+        mobileMenuBtn.querySelector('i').className = 'fas fa-bars';
+    });
+    
+    // Close menu when clicking nav links (mobile)
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                navLinks.classList.remove('active');
+                overlay.classList.remove('active');
+                mobileMenuBtn.querySelector('i').className = 'fas fa-bars';
+            }
+        });
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            navLinks.classList.remove('active');
+            overlay.classList.remove('active');
+            mobileMenuBtn.querySelector('i').className = 'fas fa-bars';
+        }
+    });
+});
+</script>
+
+    <script src="{% load static %}{% static 'chatkada/js/app.js' %}"></script>
+    <script src="{% load static %}{% static 'chatkada/js/rain.js' %}"></script>
+    <script src="{% load static %}{% static 'chatkada/js/enhanced-audio-control.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

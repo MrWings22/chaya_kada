@@ -1,0 +1,29 @@
+from django.urls import path
+from django.contrib.auth import views as auth_views
+from . import views
+
+urlpatterns = [
+    path('', views.home, name='home'),
+    path('register/', views.register, name='register'),
+    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('kada/', views.kada, name='kada'),
+    path('profile/', views.profile, name='profile'),
+    path('buy-item/', views.buy_item, name='buy_item'),
+    
+    # Chat URLs - make sure these match your template references
+    path('find-chat/', views.find_chat, name='find_chat'),
+    path('chat/<uuid:room_id>/', views.chat_room, name='chat_room'),
+    path('send-chat-message/', views.send_chat_message, name='send_chat_message'),
+    path('get-chat-messages/<uuid:room_id>/', views.get_chat_messages, name='get_chat_messages'),
+    path('leave-chat/<uuid:room_id>/', views.leave_chat, name='leave_chat'),
+    
+    # Challenge & Coin URLs
+    path('coin-center/', views.coin_center, name='coin_center'),
+    path('check-daily-login/', views.check_daily_login, name='check_daily_login'),
+    path('record-chat-friend/', views.record_chat_friend, name='record_chat_friend'),
+    path('get-coin-progress/', views.get_coin_progress, name='get_coin_progress'),
+    path('get-online-status/', views.get_online_status, name='get_online_status'),
+    path('find-stranger/', views.find_stranger_chat, name='find_stranger_chat'),
+
+]

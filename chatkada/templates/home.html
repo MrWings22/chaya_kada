@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">
+            <i class="fas fa-coffee"></i>
+            Welcome to Chaya Kada
+        </h1>
+        <p class="hero-subtitle">
+            Experience the warmth of a traditional tea shop in the digital world
+        </p>
+        <div class="hero-features">
+            <div class="feature">
+                <i class="fas fa-comments"></i>
+                <span>Chat with friends</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-cookie-bite"></i>
+                <span>Virtual snacks</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-cloud-rain"></i>
+                <span>Monsoon vibes</span>
+            </div>
+        </div>
+        {% if not user.is_authenticated %}
+        <div class="hero-actions">
+            <a href="{% url 'register' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Join the Kada
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-secondary">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </a>
+        </div>
+        {% else %}
+        <div class="hero-actions">
+            <a href="{% url 'kada' %}" class="btn btn-primary">
+                <i class="fas fa-store"></i> Enter Kada
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="about-section">
+    <div class="container">
+        <h2>What is Chaya Kada?</h2>
+        <p>
+            Chaya Kada brings the nostalgic experience of a traditional Indian tea shop to your screen. 
+            Enjoy virtual chai, snacks, and conversations with the soothing sound of rain in the background.
+        </p>
+    </div>
+</div>
+{% endblock %}

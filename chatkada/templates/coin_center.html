@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="coin-center-container">
+    <div class="coin-center-header">
+        <h1><i class="fas fa-coins"></i> Coin Center</h1>
+        <div class="total-coins-display">
+            <div class="coin-amount">{{ profile.coins }}</div>
+            <div class="coin-label">Total Coins</div>
+        </div>
+    </div>
+
+    <!-- Daily Challenges Section -->
+    <div class="challenges-section">
+        <h2><i class="fas fa-trophy"></i> Today's Challenges</h2>
+        <div class="challenges-grid">
+            <!-- Daily Login Challenge -->
+            <div class="challenge-card {% if daily_login_completed %}completed{% endif %}">
+                <div class="challenge-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="challenge-info">
+                    <h3>Daily Login</h3>
+                    <p>Log in to get your daily bonus</p>
+                    <div class="challenge-reward">+25 coins</div>
+                </div>
+                <div class="challenge-status">
+                    {% if daily_login_completed %}
+                        <i class="fas fa-check-circle completed-icon"></i>
+                        <span>Completed!</span>
+                    {% else %}
+                        <button id="claim-login-btn" class="btn btn-primary">
+                            <i class="fas fa-gift"></i> Claim
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Make Friends Challenge -->
+            <div class="challenge-card {% if friends_challenge_completed %}completed{% endif %}">
+                <div class="challenge-icon">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <div class="challenge-info">
+                    <h3>Make 5 New Friends</h3>
+                    <p>Chat with 5 new strangers today</p>
+                    <div class="challenge-reward">+60 coins</div>
+                </div>
+                <div class="challenge-status">
+                    {% if friends_challenge_completed %}
+                        <i class="fas fa-check-circle completed-icon"></i>
+                        <span>Completed!</span>
+                    {% else %}
+                        <div class="progress-fill" style="width: {{ friends_progress_percentage }}%"></div>
+                        <span class="progress-text">{{ friends_progress }}/5</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Progress Chart -->
+    <div class="progress-section">
+        <h2><i class="fas fa-chart-line"></i> Daily Progress (This Week)</h2>
+        <div class="progress-chart">
+            {% for day in daily_progress %}
+            <div class="progress-day">
+                <div class="progress-bar-vertical">
+                   <div class="progress-fill-vertical" style="height: calc({{ day.coins }} * 2px)" title="{{ day.coins }} coins"></div>
+                </div>
+                <div class="day-label">{{ day.date|date:"D" }}</div>
+                <div class="day-coins">{{ day.coins }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Weekly Summary -->
+    <div class="summary-section">
+        <h2><i class="fas fa-calendar-week"></i> Weekly Summary</h2>
+        <div class="summary-cards">
+            {% for summary in weekly_summary %}
+            <div class="summary-card">
+                <div class="summary-icon">
+                    {% if summary.transaction_type == 'daily_login' %}
+                        <i class="fas fa-calendar-check"></i>
+                    {% elif summary.transaction_type == 'make_friends' %}
+                        <i class="fas fa-user-friends"></i>
+                    {% else %}
+                        <i class="fas fa-coins"></i>
+                    {% endif %}
+                </div>
+                <div class="summary-info">
+                    <div class="summary-amount">+{{ summary.total_coins }}</div>
+                    <div class="summary-label">{{ summary.get_transaction_type_display }}</div>
+                    <div class="summary-count">{{ summary.count }} times</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Transaction History -->
+    <div class="history-section">
+        <h2><i class="fas fa-history"></i> Recent Transactions</h2>
+        <div class="transaction-list">
+            {% for transaction in recent_transactions %}
+            <div class="transaction-item {% if transaction.amount > 0 %}positive{% else %}negative{% endif %}">
+                <div class="transaction-icon">
+                    {% if transaction.transaction_type == 'daily_login' %}
+                        <i class="fas fa-calendar-check"></i>
+                    {% elif transaction.transaction_type == 'make_friends' %}
+                        <i class="fas fa-user-friends"></i>
+                    {% elif transaction.transaction_type == 'purchase' %}
+                        <i class="fas fa-shopping-cart"></i>
+                    {% else %}
+                        <i class="fas fa-gift"></i>
+                    {% endif %}
+                </div>
+                <div class="transaction-details">
+                    <div class="transaction-description">{{ transaction.description }}</div>
+                    <div class="transaction-time">{{ transaction.timestamp|timesince }} ago</div>
+                </div>
+                <div class="transaction-amount {% if transaction.amount > 0 %}positive{% else %}negative{% endif %}">
+                    {% if transaction.amount > 0 %}+{% endif %}{{ transaction.amount }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{% url 'find_chat' %}" class="action-btn">
+            <i class="fas fa-comments"></i>
+            Start Chatting
+        </a>
+        <a href="{% url 'kada' %}" class="action-btn">
+            <i class="fas fa-store"></i>
+            Visit Kada
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Claim daily login bonus
+document.getElementById('claim-login-btn')?.addEventListener('click', function() {
+    fetch('/check-daily-login/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            location.reload();
+        } else {
+            showNotification(data.message, 'info');
+        }
+    });
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

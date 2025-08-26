@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Existing profile header -->
+    <div class="profile-header">
+        <div class="profile-avatar">{{ user.userprofile.avatar }}</div>
+        <div class="profile-info">
+            <h1>{{ user.username }}</h1>
+            <div class="profile-stats">
+                <div class="stat">
+                    <i class="fas fa-coins"></i>
+                    <span>{{ user.userprofile.coins }} Coins</span>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span>{{ total_purchases }} Purchases</span>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-share"></i>
+                    <span>{{ total_shared }} Items Shared</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="quick-actions-section">
+        <div class="action-cards-grid">
+            <button type="button" onclick="window.location.href='{% url 'coin_center' %}'" class="action-card coin-center-card" style="border: none; background: none; padding: 0; text-align: left; cursor: pointer; width: 100%;">
+                <div class="action-card-header">
+                    <div class="action-icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="action-badge">
+                        <span>New Challenges</span>
+                    </div>
+                </div>
+                <div class="action-content">
+                    <h3>Coin Center</h3>
+                    <p>Complete daily challenges and track your coin progress</p>
+                    <div class="action-highlights">
+                        <div class="highlight-item">
+                            <i class="fas fa-trophy"></i>
+                            <span>Daily Challenges</span>
+                        </div>
+                        <div class="highlight-item">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Progress Tracking</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-footer">
+                    <div class="coin-display">
+                        <i class="fas fa-coins"></i>
+                        <span>{{ user.userprofile.coins }} coins</span>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                </div>
+            </button>
+    <!-- Purchase History with Sharing Status -->
+    <div class="profile-content">
+        <div class="section">
+            <h2><i class="fas fa-shopping-cart"></i> Recent Purchases</h2>
+            
+            <!-- Available to Share -->
+            {% if available_items %}
+            <div class="subsection">
+                <h3><i class="fas fa-gift"></i> Available to Share</h3>
+                <div class="purchases-list">
+                    {% for purchase in available_items %}
+                    <div class="purchase-item available-to-share">
+                        <div class="purchase-emoji">{{ purchase.item.emoji }}</div>
+                        <div class="purchase-details">
+                            <div class="purchase-name">{{ purchase.item.name }}</div>
+                            <div class="purchase-meta">
+                                <span class="quantity-info">
+                                    {{ purchase.remaining_quantity }}/{{ purchase.quantity }} remaining
+                                </span>
+                                <span class="purchase-date">{{ purchase.timestamp|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        <div class="purchase-actions">
+                            <button class="btn btn-sm btn-primary share-item-btn" 
+                                    data-purchase-id="{{ purchase.id }}"
+                                    data-item-name="{{ purchase.item.name }}"
+                                    data-remaining="{{ purchase.remaining_quantity }}">
+                                <i class="fas fa-share"></i> Share
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- All Purchases -->
+            <div class="subsection">
+                <h3><i class="fas fa-history"></i> Purchase History</h3>
+                {% if purchases %}
+                <div class="purchases-list">
+                    {% for purchase in purchases %}
+                    <div class="purchase-item {% if purchase.remaining_quantity == 0 %}fully-shared{% endif %}">
+                        <div class="purchase-emoji">{{ purchase.item.emoji }}</div>
+                        <div class="purchase-details">
+                            <div class="purchase-name">{{ purchase.item.name }}</div>
+                            <div class="purchase-meta">
+                                {{ purchase.quantity }}x - {{ purchase.total_price }} coins
+                                <span class="purchase-date">{{ purchase.timestamp|date:"M d, Y" }}</span>
+                                {% if purchase.remaining_quantity == 0 %}
+                                <span class="shared-badge">✅ Fully Shared</span>
+                                {% elif purchase.remaining_quantity < purchase.quantity %}
+                                <span class="partial-shared-badge">📤 Partially Shared</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-shopping-cart"></i>
+                    <p>No purchases yet. Visit the <a href="{% url 'kada' %}">Kada</a> to order something!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Share Item Modal -->
+<div id="share-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Share Item in Chat</h3>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Item to Share:</label>
+                <div id="share-item-info" class="item-info"></div>
+            </div>
+            <div class="form-group">
+                <label>Quantity to Share:</label>
+                <input type="number" id="share-quantity" min="1" value="1">
+                <span id="max-quantity-info"></span>
+            </div>
+            <div class="form-group">
+                <label>Optional Message:</label>
+                <textarea id="share-message" placeholder="Add a message with your shared item..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Select Chat Room:</label>
+                <select id="chat-room-select">
+                    <option value="">Select a room...</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="confirm-share-btn" class="btn btn-primary">Share Item</button>
+            <button class="btn btn-secondary close-modal">Cancel</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPurchaseId = null;
+let maxQuantity = 0;
+
+// Share item functionality
+document.querySelectorAll('.share-item-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        currentPurchaseId = this.dataset.purchaseId;
+        const itemName = this.dataset.itemName;
+        const remainingQty = parseInt(this.dataset.remaining);
+        
+        maxQuantity = remainingQty;
+        
+        document.getElementById('share-item-info').innerHTML = `
+            <strong>${itemName}</strong> (${remainingQty} available)
+        `;
+        document.getElementById('share-quantity').max = remainingQty;
+        document.getElementById('share-quantity').value = Math.min(1, remainingQty);
+        document.getElementById('max-quantity-info').textContent = `Max: ${remainingQty}`;
+        
+        // Load user's active chat rooms
+        loadUserChatRooms();
+        
+        document.getElementById('share-modal').style.display = 'block';
+    });
+});
+
+// Load user's chat rooms
+function loadUserChatRooms() {
+    fetch('/get-user-chat-rooms/')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('chat-room-select');
+            select.innerHTML = '<option value="">Select a room...</option>';
+            
+            data.rooms.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room.room_id;
+                option.textContent = room.name;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error loading chat rooms:', error));
+}
+
+// Confirm share
+document.getElementById('confirm-share-btn').addEventListener('click', function() {
+    const roomId = document.getElementById('chat-room-select').value;
+    const quantity = parseInt(document.getElementById('share-quantity').value);
+    const message = document.getElementById('share-message').value.trim();
+    
+    if (!roomId) {
+        alert('Please select a chat room');
+        return;
+    }
+    
+    if (quantity > maxQuantity || quantity < 1) {
+        alert(`Please enter a quantity between 1 and ${maxQuantity}`);
+        return;
+    }
+    
+    // Share the item
+    fetch('/share-item-in-chat/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            purchase_id: currentPurchaseId,
+            room_id: roomId,
+            quantity: quantity,
+            message: message
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload(); // Refresh to show updated quantities
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error sharing item:', error);
+        alert('An error occurred while sharing the item');
+    });
+    
+    document.getElementById('share-modal').style.display = 'none';
+});
+
+// Modal close functionality
+document.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('share-modal').style.display = 'none';
+    });
+});
+
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

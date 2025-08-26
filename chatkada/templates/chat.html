@@ -1,0 +1,1144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-header">
+        <div class="chat-title">
+            <h2>
+                {% if room.room_type == 'stranger' %}
+                    <i class="fas fa-user-secret"></i> Stranger Chat
+                {% elif room.room_type == 'private_bench' %}
+                    <i class="fas fa-chair"></i> {{ room.bench_name }}
+                {% else %}
+                    <i class="fas fa-comments"></i> {{ room.name }}
+                {% endif %}
+            </h2>
+            <div class="chat-subtitle">
+                {% if room.room_type == 'stranger' %}
+                    <span class="chat-type stranger">
+                        <i class="fas fa-clock"></i> 
+                        Expires in {{ room.time_remaining_str }}
+                    </span>
+                {% else %}
+                    <span class="chat-type private">
+                        <i class="fas fa-users"></i> 
+                        {{ room.get_participant_count }}/4 people
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="chat-controls">
+            <div class="participants-list">
+                <span class="participants-count">
+                    <i class="fas fa-users"></i> {{ room.get_participant_count }}
+                </span>
+                <div class="participants-dropdown">
+                    {% for participant in room.participants.all %}
+                    <div class="participant-item">
+                        <span class="participant-avatar">{{ participant.userprofile.avatar }}</span>
+                        <span class="participant-name">{{ participant.username }}</span>
+                        {% if participant == user %}
+                        <span class="participant-you">(You)</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            {% if room.room_type == 'stranger' %}
+            <button id="share-item-btn" class="btn btn-sm btn-accent" onclick="openItemSharing()">
+                <i class="fas fa-gift"></i> Share Item
+            </button>
+            {% endif %}
+            
+            <button id="sound-toggle" class="btn btn-sm" onclick="toggleNotificationSound()">
+                <i class="fas fa-volume-up"></i>
+            </button>
+            
+            <div class="chat-menu-dropdown">
+                <button class="btn btn-sm" onclick="toggleChatMenu()">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <div class="chat-menu" id="chat-menu">
+                    {% if room.room_type == 'stranger' %}
+                    <button onclick="leaveStrangerChat()" class="menu-item danger">
+                        <i class="fas fa-sign-out-alt"></i> Leave Chat
+                    </button>
+                    {% else %}
+                    <button onclick="showInviteOptions()" class="menu-item">
+                        <i class="fas fa-user-plus"></i> Invite Friends
+                    </button>
+                    {% endif %}
+                    <button onclick="clearChatHistory()" class="menu-item">
+                        <i class="fas fa-broom"></i> Clear History
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+        {% for message in messages %}
+        <div class="message {% if message.user == user %}own{% endif %} {% if message.message_type == 'shared_item' %}shared-item{% elif message.message_type == 'system' %}system{% endif %}">
+            {% if message.message_type == 'system' %}
+                <div class="system-message">
+                    <i class="fas fa-info-circle"></i>
+                    <span>{{ message.content }}</span>
+                </div>
+            {% elif message.message_type == 'shared_item' %}
+                <div class="message-header">
+                    <span class="username">{{ message.user.username }}</span>
+                    <span class="timestamp">{{ message.timestamp|date:"H:i" }}</span>
+                </div>
+                <div class="shared-item-content">
+                    <div class="shared-item-icon">
+                        <i class="fas fa-gift"></i>
+                    </div>
+                    <div class="shared-item-info">
+                        <span class="shared-item-emoji">{{ message.shared_item.emoji }}</span>
+                        <div class="shared-item-details">
+                            <strong>{{ message.user.username }} shared {{ message.shared_item.name }}!</strong>
+                            <small>{{ message.shared_item.description }}</small>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="message-header">
+                    <span class="username">{{ message.user.username }}</span>
+                    <span class="timestamp">{{ message.timestamp|date:"H:i" }}</span>
+                </div>
+                <div class="message-content">{{ message.content }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Typing Indicator -->
+    <div class="typing-indicator" id="typing-indicator" style="display: none;">
+        <div class="typing-dots">
+            <span></span><span></span><span></span>
+        </div>
+        <span class="typing-text">Someone is typing...</span>
+    </div>
+
+    <div class="chat-input">
+        <div class="input-container">
+            <input type="text" id="message-input" placeholder="Type your message..." maxlength="500" autocomplete="off">
+            <div class="input-actions">
+                {% if room.room_type == 'stranger' %}
+                <button id="emoji-btn" class="input-btn" onclick="toggleEmojiPicker()">
+                    <i class="fas fa-smile"></i>
+                </button>
+                {% endif %}
+                <button id="send-button" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        
+        {% if room.room_type == 'stranger' %}
+        <div class="quick-actions">
+            <button class="quick-action-btn" onclick="sendQuickMessage('👋 Hello!')">
+                <i class="fas fa-hand-wave"></i> Hello
+            </button>
+            <button class="quick-action-btn" onclick="sendQuickMessage('☕ Let\\'s chat over chai!')">
+                <i class="fas fa-coffee"></i> Chai
+            </button>
+            <button class="quick-action-btn" onclick="sendQuickMessage('🌧️ How\\'s the weather?')">
+                <i class="fas fa-cloud-rain"></i> Weather
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Item Sharing Modal -->
+{% if room.room_type == 'stranger' %}
+<div id="item-sharing-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeItemSharing()">&times;</span>
+        <h3>Share an Item from Your Collection</h3>
+        <div id="shareable-items-list">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading your items...</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Connection Status -->
+<div id="connection-status" class="connection-status">
+    <div class="connection-indicator">
+        <span class="connection-dot" id="connection-dot"></span>
+        <span class="connection-text" id="connection-text">Connected</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class EnhancedChatRoom {
+    constructor() {
+        this.roomId = '{{ room.room_id }}';
+        this.roomType = '{{ room.room_type }}';
+        this.userId = '{{ user.id }}';
+        this.username = '{{ user.username }}';
+        this.messagePollingInterval = null;
+        this.typingTimeout = null;
+        this.connectionCheckInterval = null;
+        this.soundEnabled = true;
+        this.lastMessageId = 0;
+        
+        this.init();
+    }
+    
+    init() {
+        this.setupEventListeners();
+        this.startMessagePolling();
+        this.startConnectionChecking();
+        this.loadChatHistory();
+        this.scrollToBottom();
+        
+        // Auto-focus message input
+        document.getElementById('message-input').focus();
+    }
+    
+    setupEventListeners() {
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            } else {
+                this.handleTyping();
+            }
+        });
+        
+        sendButton.addEventListener('click', () => this.sendMessage());
+        
+        // Handle page visibility for connection management
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.stopMessagePolling();
+            } else {
+                this.startMessagePolling();
+                this.checkConnection();
+            }
+        });
+        
+        // Prevent accidental page refresh
+        window.addEventListener('beforeunload', (e) => {
+            if (this.roomType === 'stranger') {
+                e.preventDefault();
+                e.returnValue = 'Are you sure you want to leave this stranger chat?';
+            }
+        });
+    }
+    
+    startMessagePolling() {
+        this.stopMessagePolling();
+        this.messagePollingInterval = setInterval(() => {
+            this.loadNewMessages();
+        }, 2000);
+    }
+    
+    stopMessagePolling() {
+        if (this.messagePollingInterval) {
+            clearInterval(this.messagePollingInterval);
+            this.messagePollingInterval = null;
+        }
+    }
+    
+    startConnectionChecking() {
+        this.connectionCheckInterval = setInterval(() => {
+            this.checkConnection();
+        }, 30000);
+    }
+    
+    loadChatHistory() {
+        fetch(`/get-chat-messages/${this.roomId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.messages.length > 0) {
+                    const lastMessage = data.messages[data.messages.length - 1];
+                    this.lastMessageId = lastMessage.id;
+                }
+                this.updateConnectionStatus(true);
+            })
+            .catch(error => {
+                console.error('Failed to load chat history:', error);
+                this.updateConnectionStatus(false);
+            });
+    }
+    
+    loadNewMessages() {
+        fetch(`/get-chat-messages/${this.roomId}/?since=${this.lastMessageId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.messages.length > 0) {
+                    data.messages.forEach(message => {
+                        if (message.id > this.lastMessageId) {
+                            this.appendMessage(message);
+                            this.lastMessageId = message.id;
+                            
+                            // Play notification sound for new messages from others
+                            if (message.user !== this.username && this.soundEnabled) {
+                                this.playNotificationSound();
+                            }
+                        }
+                    });
+                }
+                this.updateConnectionStatus(true);
+            })
+            .catch(error => {
+                console.error('Failed to load new messages:', error);
+                this.updateConnectionStatus(false);
+            });
+    }
+    
+    sendMessage() {
+        const messageInput = document.getElementById('message-input');
+        const content = messageInput.value.trim();
+        
+        if (!content) return;
+        
+        const messageData = {
+            room_id: this.roomId,
+            content: content,
+            message_type: 'text'
+        };
+        
+        fetch('/send-chat-message/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(messageData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                messageInput.value = '';
+                this.appendMessage(data.message);
+                this.lastMessageId = data.message.id;
+            } else {
+                this.showNotification('Failed to send message: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error sending message:', error);
+            this.showNotification('Failed to send message', 'error');
+        });
+    }
+    
+    sendQuickMessage(message) {
+        document.getElementById('message-input').value = message;
+        this.sendMessage();
+    }
+    
+    shareItem(itemId) {
+        const messageData = {
+            room_id: this.roomId,
+            message_type: 'shared_item',
+            shared_item_id: itemId
+        };
+        
+        fetch('/send-chat-message/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(messageData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.appendMessage(data.message);
+                this.lastMessageId = data.message.id;
+                this.closeItemSharing();
+                this.showNotification(`Shared ${data.message.shared_item.name}! Remaining: ${data.remaining_quantity}`, 'success');
+            } else {
+                this.showNotification('Failed to share item: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error sharing item:', error);
+            this.showNotification('Failed to share item', 'error');
+        });
+    }
+    
+    appendMessage(message) {
+        const messagesContainer = document.getElementById('chat-messages');
+        const messageDiv = document.createElement('div');
+        
+        let messageClass = `message ${message.user === this.username ? 'own' : 'other'}`;
+        if (message.message_type === 'shared_item') messageClass += ' shared-item';
+        if (message.message_type === 'system') messageClass += ' system';
+        
+        messageDiv.className = messageClass;
+        
+        if (message.message_type === 'system') {
+            messageDiv.innerHTML = `
+                <div class="system-message">
+                    <i class="fas fa-info-circle"></i>
+                    <span>${message.content}</span>
+                </div>
+            `;
+        } else if (message.message_type === 'shared_item') {
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="username">${message.user}</span>
+                    <span class="timestamp">${new Date(message.timestamp).toLocaleTimeString()}</span>
+                </div>
+                <div class="shared-item-content">
+                    <div class="shared-item-icon">
+                        <i class="fas fa-gift"></i>
+                    </div>
+                    <div class="shared-item-info">
+                        <span class="shared-item-emoji">${message.shared_item.emoji}</span>
+                        <div class="shared-item-details">
+                            <strong>${message.user} shared ${message.shared_item.name}!</strong>
+                            <small>${message.shared_item.description}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="username">${message.user}</span>
+                    <span class="timestamp">${new Date(message.timestamp).toLocaleTimeString()}</span>
+                </div>
+                <div class="message-content">${message.content}</div>
+            `;
+        }
+        
+        messagesContainer.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+    
+    scrollToBottom() {
+        const messagesContainer = document.getElementById('chat-messages');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    handleTyping() {
+        // Clear existing timeout
+        if (this.typingTimeout) {
+            clearTimeout(this.typingTimeout);
+        }
+        
+        // Show typing indicator for others (implement with WebSocket for real-time)
+        this.typingTimeout = setTimeout(() => {
+            // Hide typing indicator
+        }, 1000);
+    }
+    
+    checkConnection() {
+        fetch('/get-online-status/')
+            .then(response => {
+                if (response.ok) {
+                    this.updateConnectionStatus(true);
+                } else {
+                    throw new Error('Connection failed');
+                }
+            })
+            .catch(error => {
+                this.updateConnectionStatus(false);
+            });
+    }
+    
+    updateConnectionStatus(connected) {
+        const dot = document.getElementById('connection-dot');
+        const text = document.getElementById('connection-text');
+        
+        if (connected) {
+            dot.className = 'connection-dot connected';
+            text.textContent = 'Connected';
+        } else {
+            dot.className = 'connection-dot disconnected';
+            text.textContent = 'Disconnected';
+        }
+    }
+    
+    playNotificationSound() {
+        // Create a simple notification sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
+    }
+    
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type} show`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+}
+
+// Global functions
+function toggleNotificationSound() {
+    chatRoom.soundEnabled = !chatRoom.soundEnabled;
+    const button = document.getElementById('sound-toggle');
+    const icon = button.querySelector('i');
+    
+    if (chatRoom.soundEnabled) {
+        icon.className = 'fas fa-volume-up';
+        chatRoom.showNotification('Sound notifications enabled', 'success');
+    } else {
+        icon.className = 'fas fa-volume-mute';
+        chatRoom.showNotification('Sound notifications disabled', 'info');
+    }
+}
+
+function toggleChatMenu() {
+    const menu = document.getElementById('chat-menu');
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+function openItemSharing() {
+    const modal = document.getElementById('item-sharing-modal');
+    if (modal) {
+        modal.style.display = 'block';
+        loadShareableItems();
+    }
+}
+
+function closeItemSharing() {
+    const modal = document.getElementById('item-sharing-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function loadShareableItems() {
+    const container = document.getElementById('shareable-items-list');
+    
+    fetch('/get-shareable-items/')
+        .then(response => response.json())
+        .then(data => {
+            container.innerHTML = '';
+            
+            if (data.shareable_items.length === 0) {
+                container.innerHTML = `
+                    <div class="no-items">
+                        <i class="fas fa-shopping-cart"></i>
+                        <p>No items to share. Visit the <a href="/kada/">Kada</a> to buy some items first!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            data.shareable_items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'shareable-item';
+                itemDiv.innerHTML = `
+                    <div class="item-info">
+                        <span class="item-emoji">${item.emoji}</span>
+                        <div class="item-details">
+                            <strong>${item.name}</strong>
+                            <small>${item.description}</small>
+                            <span class="remaining-count">Remaining: ${item.remaining_quantity}</span>
+                        </div>
+                    </div>
+                    <button onclick="chatRoom.shareItem(${item.id})" class="btn btn-sm btn-primary">
+                        <i class="fas fa-share"></i> Share
+                    </button>
+                `;
+                container.appendChild(itemDiv);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading shareable items:', error);
+            container.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load items. Please try again.</p>
+                </div>
+            `;
+        });
+}
+
+function leaveStrangerChat() {
+    if (confirm('Are you sure you want to leave this stranger chat? You won\'t be able to rejoin.')) {
+        fetch(`/leave-chat/${chatRoom.roomId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                chatRoom.showNotification('Left the chat successfully', 'success');
+                setTimeout(() => {
+                    window.location.href = '/find-chat/';
+                }, 1000);
+            } else {
+                chatRoom.showNotification('Error leaving chat', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error leaving chat:', error);
+            chatRoom.showNotification('Error leaving chat', 'error');
+        });
+    }
+}
+
+function clearChatHistory() {
+    if (confirm('Clear chat history? This action cannot be undone.')) {
+        document.getElementById('chat-messages').innerHTML = '';
+        chatRoom.showNotification('Chat history cleared', 'info');
+    }
+}
+
+// Utility function
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Initialize chat room
+let chatRoom;
+document.addEventListener('DOMContentLoaded', () => {
+    chatRoom = new EnhancedChatRoom();
+});
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    const itemModal = document.getElementById('item-sharing-modal');
+    if (event.target === itemModal) {
+        closeItemSharing();
+    }
+    
+    const chatMenu = document.getElementById('chat-menu');
+    if (chatMenu && !event.target.closest('.chat-menu-dropdown')) {
+        chatMenu.style.display = 'none';
+    }
+}
+</script>
+
+<style>
+/* Enhanced Chat Room Styles */
+.chat-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, var(--primary-color), #A0522D);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.chat-title h2 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.chat-subtitle {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-top: 0.25rem;
+}
+
+.chat-type.stranger {
+    color: #FFD700;
+}
+
+.chat-type.private {
+    color: #90EE90;
+}
+
+.chat-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.participants-list {
+    position: relative;
+}
+
+.participants-count {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 15px;
+    cursor: pointer;
+}
+
+.participants-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    min-width: 150px;
+    display: none;
+    z-index: 1000;
+}
+
+.participants-list:hover .participants-dropdown {
+    display: block;
+}
+
+.participant-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.participant-you {
+    color: var(--accent-color);
+    font-size: 0.8rem;
+}
+
+.chat-menu-dropdown {
+    position: relative;
+}
+
+.chat-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    min-width: 150px;
+    display: none;
+    z-index: 1000;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: none;
+    background: none;
+    color: var(--text-color);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.menu-item:hover {
+    background: var(--border-color);
+}
+
+.menu-item.danger {
+    color: #f44336;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    background: var(--background-color);
+}
+
+.message {
+    margin-bottom: 1rem;
+    max-width: 70%;
+}
+
+.message.own {
+    margin-left: auto;
+}
+
+.message.other {
+    margin-right: auto;
+}
+
+.message.system {
+    max-width: 100%;
+    text-align: center;
+}
+
+.system-message {
+    background: rgba(139, 69, 19, 0.2);
+    color: var(--accent-color);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-style: italic;
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+}
+
+.username {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.timestamp {
+    color: var(--text-secondary);
+}
+
+.message-content {
+    background: var(--surface-color);
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    word-wrap: break-word;
+}
+
+.message.own .message-content {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Shared Item Message */
+.shared-item-content {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+    border: 2px solid var(--accent-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.shared-item-icon {
+    font-size: 1.5rem;
+    color: var(--accent-color);
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.shared-item-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.shared-item-emoji {
+    font-size: 2rem;
+}
+
+.shared-item-details strong {
+    color: var(--accent-color);
+    display: block;
+}
+
+.shared-item-details small {
+    color: var(--text-secondary);
+}
+
+/* Chat Input */
+.chat-input {
+    background: var(--surface-color);
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.input-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.input-container input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 25px;
+    background: var(--background-color);
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.input-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.input-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.input-btn:hover {
+    background: var(--border-color);
+}
+
+.quick-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.quick-action-btn {
+    background: rgba(139, 69, 19, 0.1);
+    border: 1px solid rgba(139, 69, 19, 0.3);
+    color: var(--accent-color);
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quick-action-btn:hover {
+    background: rgba(139, 69, 19, 0.2);
+}
+
+/* Connection Status */
+.connection-status {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    z-index: 1000;
+}
+
+.connection-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ccc;
+}
+
+.connection-dot.connected {
+    background: #4CAF50;
+    animation: pulse 2s infinite;
+}
+
+.connection-dot.disconnected {
+    background: #f44336;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+}
+
+/* Typing Indicator */
+.typing-indicator {
+    padding: 0.5rem 1rem;
+    background: var(--surface-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.typing-dots {
+    display: flex;
+    gap: 0.2rem;
+}
+
+.typing-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    animation: typing 1.4s infinite;
+}
+
+.typing-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+}
+
+/* Item Sharing Modal */
+.shareable-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+.item-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.item-emoji {
+    font-size: 2rem;
+}
+
+.item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.remaining-count {
+    color: var(--accent-color);
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.no-items,
+.error-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.no-items i,
+.error-message i {
+    font-size: 3rem;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.loading-spinner i {
+    font-size: 2rem;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .chat-container {
+        height: calc(100vh - 80px);
+        margin: 0;
+        border-radius: 0;
+    }
+    
+    .chat-header {
+        padding: 1rem;
+    }
+    
+    .chat-title h2 {
+        font-size: 1.1rem;
+    }
+    
+    .chat-controls {
+        gap: 0.5rem;
+    }
+    
+    .message {
+        max-width: 85%;
+    }
+    
+    .quick-actions {
+        justify-content: center;
+    }
+    
+    .connection-status {
+        bottom: 10px;
+        left: 10px;
+        font-size: 0.7rem;
+    }
+    
+    .shared-item-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+    
+    .shared-item-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="kada-container">
+    <div class="kada-header">
+        <h1><i class="fas fa-store"></i> Welcome to the Kada</h1>
+        <p>Choose your favorite items and enjoy the monsoon vibes</p>
+    </div>
+
+    <div class="menu-section">
+        <div class="menu-category">
+            <h2><i class="fas fa-coffee"></i> Chai</h2>
+            <div class="items-grid">
+                {% for item in chai_items %}
+                <div class="item-card">
+                    <div class="item-emoji">{{ item.emoji }}</div>
+                    <div class="item-name">{{ item.name }}</div>
+                    <div class="item-price">{{ item.price }} coins</div>
+                    <button class="btn btn-primary buy-btn" onclick="buyItem({{ item.id }})">
+                        <i class="fas fa-shopping-cart"></i> Buy
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="menu-category">
+            <h2><i class="fas fa-cookie-bite"></i> Snacks</h2>
+            <div class="items-grid">
+                {% for item in snack_items %}
+                <div class="item-card">
+                    <div class="item-emoji">{{ item.emoji }}</div>
+                    <div class="item-name">{{ item.name }}</div>
+                    <div class="item-price">{{ item.price }} coins</div>
+                    <button class="btn btn-primary buy-btn" onclick="buyItem({{ item.id }})">
+                        <i class="fas fa-shopping-cart"></i> Buy
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="menu-category">
+            <h2><i class="fas fa-candy-cane"></i> Sweets</h2>
+            <div class="items-grid">
+                {% for item in sweet_items %}
+                <div class="item-card">
+                    <div class="item-emoji">{{ item.emoji }}</div>
+                    <div class="item-name">{{ item.name }}</div>
+                    <div class="item-price">{{ item.price }} coins</div>
+                    <button class="btn btn-primary buy-btn" onclick="buyItem({{ item.id }})">
+                        <i class="fas fa-shopping-cart"></i> Buy
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="kada-actions">
+        <a href="{% url 'find_chat' %}" class="btn btn-secondary">
+            <i class="fas fa-comments"></i> Join Chat
+        </a>
+    </div>
+</div>
+
+<div class="notification" id="notification"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function buyItem(itemId) {
+    fetch('/buy-item/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            item_id: itemId,
+            quantity: 1
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        showNotification(data.message, data.success ? 'success' : 'error');
+        if (data.success) {
+            document.querySelector('.coins-display').innerHTML = 
+                '<i class="fas fa-coins"></i> ' + data.coins;
+        }
+    });
+}
+
+function showNotification(message, type) {
+    const notification = document.getElementById('notification');
+    notification.textContent = message;
+    notification.className = `notification ${type} show`;
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 3000);
+}
+</script>
+{% endblock %}
