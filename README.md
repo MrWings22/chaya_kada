@@ -99,7 +99,7 @@ Inspired by Kerala tea-shop vibes ☕️
 
 ## 📄 License
 
-MIT License (see LICENSE)
+GNU GENERAL PUBLIC LICENSE
 
 
 ## ⚡️ Quickstart (Local Dev)
