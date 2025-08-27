@@ -22,15 +22,6 @@ import uuid
 from django.http import HttpResponse
 from django.contrib.auth.models import User
 
-def create_superuser_view(request):
-    if not User.objects.filter(username="admin").exists():
-        User.objects.create_superuser("admin1", "admin@example.com", "admin@chayakada")
-        return HttpResponse("Superuser created!")
-    return HttpResponse("Superuser already exists!")
-
-def home(request):
-    return render(request, 'home.html')
-
 def register(request):
     if request.method == 'POST':
         form = SimpleUserCreationForm(request.POST)
