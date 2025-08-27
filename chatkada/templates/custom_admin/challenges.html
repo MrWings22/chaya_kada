@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Daily Challenges</h2>
+<a href="{% url 'assign_challenge' %}">Assign Challenge to All Users Today</a>
+<table>
+<thead>
+<tr><th>User</th><th>Challenge</th><th>Date</th><th>Coins</th></tr>
+</thead>
+<tbody>
+{% for ch in challenges %}
+<tr>
+<td>{{ ch.user.username }}</td>
+<td>{{ ch.get_challenge_type_display }}</td>
+<td>{{ ch.completed_date }}</td>
+<td>{{ ch.coins_earned }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}

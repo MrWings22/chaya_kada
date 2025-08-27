@@ -26,4 +26,14 @@ urlpatterns = [
     path('get-online-status/', views.get_online_status, name='get_online_status'),
     path('find-stranger/', views.find_stranger_chat, name='find_stranger_chat'),
     path("create-superuser/", create_superuser_view),
+    # Item management for admin
+    path('custom-admin/login/', views.custom_admin_login, name='custom_admin_login'),
+    path('custom-admin/', views.custom_admin_dashboard, name='custom_admin_dashboard'),
+    path('custom-admin/items/', views.manage_items, name='manage_items'),
+    path('custom-admin/items/add/', views.add_item, name='add_item'),
+    path('custom-admin/items/<int:item_id>/edit/', views.edit_item, name='edit_item'),
+    path('custom-admin/items/<int:item_id>/delete/', views.delete_item, name='delete_item'),
+    # Challenge management for admin
+    path('custom-admin/challenges/', views.manage_challenges, name='manage_challenges'),
+    path('custom-admin/challenges/assign/', views.assign_challenge, name='assign_challenge'),
 ]

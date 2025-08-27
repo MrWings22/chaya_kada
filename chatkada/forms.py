@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from .models import Item, DailyChallenge
 
 class SimpleUserCreationForm(UserCreationForm):
     username = forms.CharField(
@@ -70,3 +71,14 @@ class SimpleUserCreationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+#for custom admin 
+class ItemForm(forms.ModelForm):
+    class Meta:
+        model = Item
+        fields = ['name', 'emoji', 'category', 'price', 'description', 'available', 'can_be_shared']
+
+class AssignChallengeForm(forms.Form):
+    challenge_type = forms.ChoiceField(choices=DailyChallenge.CHALLENGE_TYPES)
+    coins_earned = forms.IntegerField(min_value=1, initial=10)
+

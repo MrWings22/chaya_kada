@@ -1208,3 +1208,98 @@ def get_online_status(request):
         "in_queue": in_queue,
         "timestamp": timezone.now().isoformat(),
     })
+
+#for custom admin dashboard
+from .forms import ItemForm, AssignChallengeForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login
+
+def custom_admin_login(request):
+    if request.user.is_authenticated and request.user.is_staff:
+        return redirect('custom_admin_dashboard')
+    if request.method == "POST":
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None and user.is_staff:
+            login(request, user)
+            return redirect('custom_admin_dashboard')
+        messages.error(request, "Invalid credentials or not a staff user.")
+    return render(request, 'custom_admin/admin_login.html')
+
+@login_required 
+def custom_admin_dashboard(request):
+    return render(request, 'custom_admin/dashboard.html')
+
+# ——— Items ———
+
+@login_required
+def manage_items(request):
+    items = Item.objects.all().order_by('category', 'name')
+    return render(request, 'custom_admin/items.html', {"items": items})
+
+@login_required
+def add_item(request):
+    if request.method == "POST":
+        form = ItemForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Item added!")
+            return redirect('manage_items')
+    else:
+        form = ItemForm()
+    return render(request, "custom_admin/item_form.html", {"form": form, "form_title": "Add Item"})
+
+@login_required
+def edit_item(request, item_id):
+    item = get_object_or_404(Item, id=item_id)
+    if request.method == "POST":
+        form = ItemForm(request.POST, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Item updated!")
+            return redirect('manage_items')
+    else:
+        form = ItemForm(instance=item)
+    return render(request, "custom_admin/item_form.html", {"form": form, "form_title": "Edit Item"})
+
+@login_required
+def delete_item(request, item_id):
+    item = get_object_or_404(Item, id=item_id)
+    if request.method == "POST":
+        item.delete()
+        messages.success(request, "Item deleted.")
+        return redirect('manage_items')
+    return render(request, "custom_admin/item_form.html", {"form": None, "form_title": "Delete Item", "item": item, "delete_confirm": True})
+
+# ——— Daily Challenges ———
+
+@login_required
+def manage_challenges(request):
+    challenges = DailyChallenge.objects.order_by('-completed_date')[:50]
+    return render(request, 'custom_admin/challenges.html', {"challenges": challenges})
+
+@login_required
+def assign_challenge(request):
+    if request.method == "POST":
+        form = AssignChallengeForm(request.POST)
+        if form.is_valid():
+            challenge_type = form.cleaned_data["challenge_type"]
+            coins_earned = form.cleaned_data["coins_earned"]
+            today = timezone.now().date()
+            created = 0
+            for user in User.objects.all():
+                challenges = DailyChallenge.objects.filter(user=user, challenge_type=challenge_type, completed_date=today)
+                if not challenges.exists():
+                    DailyChallenge.objects.create(
+                        user=user,
+                        challenge_type=challenge_type,
+                        completed_date=today,
+                        coins_earned=coins_earned,
+                    )
+                    created += 1
+            messages.success(request, f"Assigned {challenge_type} to {created} users for today.")
+            return redirect('manage_challenges')
+    else:
+        form = AssignChallengeForm()
+    return render(request, "custom_admin/assign_challenges.html", {"form": form})

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ form_title }}</h2>
+{% if form %}
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn">{{ form_title }}</button>
+</form>
+{% elif delete_confirm %}
+<p>Are you sure you want to delete {{ item.name }}?</p>
+<form method="post">{% csrf_token %}
+    <button type="submit" class="btn btn-danger">Confirm Delete</button>
+    <a href="{% url 'manage_items' %}">Cancel</a>
+</form>
+{% endif %}
+{% endblock %}
