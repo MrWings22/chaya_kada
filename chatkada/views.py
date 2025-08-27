@@ -18,6 +18,15 @@ from .models import (
 from .forms import SimpleUserCreationForm
 import json
 import uuid
+# views.py
+from django.http import HttpResponse
+from django.contrib.auth.models import User
+
+def create_superuser_view(request):
+    if not User.objects.filter(username="admin").exists():
+        User.objects.create_superuser("admin", "admin@example.com", "YourPassword123")
+        return HttpResponse("Superuser created!")
+    return HttpResponse("Superuser already exists!")
 
 def home(request):
     return render(request, 'home.html')

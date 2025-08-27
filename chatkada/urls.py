@@ -1,7 +1,7 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
-
+from .views import create_superuser_view
 urlpatterns = [
     path('', views.home, name='home'),
     path('register/', views.register, name='register'),
@@ -25,5 +25,5 @@ urlpatterns = [
     path('get-coin-progress/', views.get_coin_progress, name='get_coin_progress'),
     path('get-online-status/', views.get_online_status, name='get_online_status'),
     path('find-stranger/', views.find_stranger_chat, name='find_stranger_chat'),
-
+    path("create-superuser/", create_superuser_view),
 ]
