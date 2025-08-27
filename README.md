@@ -28,8 +28,9 @@
 - **Deployment**: Render, Docker
 
 ---
-git clone https://github.com/MrWings22/chaya_kada.git
-cd chaya_kada
+`git clone https://github.com/MrWings22/chaya_kada.git`
+
+`cd chaya_kada`
 
 2. **Set up your environment**
 - Copy `.env.example` to `.env` and fill in secrets and DB info.
