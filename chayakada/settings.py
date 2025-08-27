@@ -80,7 +80,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'chayakada.wsgi.application'
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-STATICFILES_DIRS = [BASE_DIR / "static"]
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
