@@ -24,7 +24,7 @@ from django.contrib.auth.models import User
 
 def create_superuser_view(request):
     if not User.objects.filter(username="admin").exists():
-        User.objects.create_superuser("admin", "admin@example.com", "YourPassword123")
+        User.objects.create_superuser("admin", "admin@example.com", "admin@chayakada")
         return HttpResponse("Superuser created!")
     return HttpResponse("Superuser already exists!")
 
